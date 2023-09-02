@@ -1,0 +1,61 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        //build task is modified version of https://gist.github.com/motla/ab7fdcf14303208996c40ca7fefe6f11 
+        {
+            "label": "Build",
+            "group": "build",
+            "type": "shell",
+            "command": "source ${config:idf.espIdfPath}/export.sh && idf.py build",
+            "windows": { "command": "${config:idf.espIdfPath}\\export.bat && idf.py build" },
+            "problemMatcher": {
+              "owner": "cpp",
+              "fileLocation": ["relative", "${workspaceFolder}/build"],
+              "pattern": {
+                "regexp": "^(.*):(\\d+):(\\d+):\\s+(warning|error):\\s+(.*)$",
+                "file": 1,
+                "line": 2,
+                "column": 3,
+                "severity": 4,
+                "message": 5
+              }
+            }
+          },
+
+        {
+            "label": "OpenOCD",
+            "type": "shell",
+            "dependsOn": [
+                "Build",
+            ],
+
+            "windows":{
+                "command": "${config:idf.toolsPath}/openocd-esp32/v0.11.0-esp32-20211220/openocd-esp32/bin/openocd -f \"board/esp32c3-builtin.cfg\"",
+            },
+            "linux":{
+                //"command": "${config:idf.toolsPath}/tools/openocd-esp32/v0.11.0-esp32-20211220/openocd-esp32/bin/openocd -f \"board/esp32c3-builtin.cfg\"" //For ESP32-C3 built-in
+                "command": "${config:idf.toolsPath}/tools/openocd-esp32/v0.11.0-esp32-20211220/openocd-esp32/bin/openocd -f interface/ftdi/esp32_devkitj_v1.cfg -f board/esp-wroom-32.cfg" //For esp-wroom-32 and esp-prog
+            },
+            "isBackground": true,
+            "problemMatcher": {
+                "owner": "custom",
+                "pattern": {
+                    "regexp": "_____"
+                },
+                "background": {
+                    "activeOnStart": true,
+                    "beginsPattern": "^.*starting gdb server for.*",
+                    "endsPattern": "^.*Listening on port.*$",
+                },
+            },
+        },
+
+        {
+            "label": "BuildandLaunchOCD",
+            "type": "shell",
+            "dependsOrder": "sequence",
+            "dependsOn": ["Build", "OpenOCD"]
+        }
+
+    ]
+}

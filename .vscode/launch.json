@@ -1,0 +1,38 @@
+{
+     //This requires vscode extension: "Command Variable"
+
+    "version": "0.2.0",
+    "configurations": [
+        {
+           "name": "ESP32-C3 builtin",
+            "type": "cppdbg",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "program": "${workspaceFolder}/build/ESPStreamer.elf",
+            "preLaunchTask": "BuildandLaunchOCD",
+            
+            "windows": {
+                "miDebuggerPath": "${config:idf.toolsPath}/riscv32-esp-elf/esp-2021r2-patch2-8.4.0/riscv32-esp-elf/bin/riscv32-esp-elf-gdb.exe",
+            },
+            "linux": {
+                //"miDebuggerPath": "${config:idf.toolsPath}/tools/riscv32-esp-elf/esp-2021r2-8.4.0/riscv32-esp-elf/bin/riscv32-esp-elf-gdb", //For ESP32-C3
+                "miDebuggerPath": "${config:idf.toolsPath}/tools/xtensa-esp32-elf/esp-2021r2-8.4.0/xtensa-esp32-elf/bin/xtensa-esp32-elf-gdb", //For ESP32 (original)
+            },
+            
+            "setupCommands": [
+                {"text": "target extended-remote :3333"},
+                {"text": "set remote hardware-watchpoint-limit 2"},
+                {"text": "mon reset halt"},
+                {"text": "flushregs"},
+
+                //{"text": "mon program_esp build/bootloader/bootloader.bin 0x1000 verify"},
+                //{"text": "mon program_esp build/partition_table/partition-table.bin 0x8000 verify"},
+                {"text": "mon program_esp build/ESPStreamer.bin 0x10000 verify"},
+                {"text": "mon reset halt"},
+                {"text": "flushregs"},
+                //{"text": "thb app_main"},
+                //{"text": "c"},
+            ]
+        }
+    ]
+}
