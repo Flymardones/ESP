@@ -11,6 +11,7 @@ void SPPControl::callback(esp_spp_cb_event_t event, esp_spp_cb_param_t* paramete
         case ESP_SPP_CLOSE_EVT:
             QPrint::println("SPP Closed");
             serverHandle = parameter->close.handle;
+            disconnect();
             break;
         case ESP_SPP_START_EVT:
             QPrint::println("SPP Started");

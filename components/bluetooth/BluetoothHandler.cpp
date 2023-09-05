@@ -91,8 +91,10 @@ void BluetoothHandler::startAudio() {
 void BluetoothHandler::setDiscoverable(bool discoverable) {
     if (discoverable) {
         esp_bt_gap_set_scan_mode(ESP_BT_CONNECTABLE, ESP_BT_GENERAL_DISCOVERABLE);
+        printf("Is connectable\n");
     } else {
         esp_bt_gap_set_scan_mode(ESP_BT_NON_CONNECTABLE, ESP_BT_NON_DISCOVERABLE);
+        printf("Is not connectable\n");
     }
 }
 

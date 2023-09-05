@@ -21,34 +21,20 @@ void reconnect(DeviceControl* deviceControl) {
 // Remove bluetooth owner when scanning nfc tag
 void set_new_owner(void* params){
     static uint32_t pin_number;
-    static bool removed_owner = false;
-    static bool interrupted = false;
-    static uint8_t owner[ESP_BD_ADDR_LEN];
-    static uint32_t read;
-
     while(1) {
         if(xQueueReceive(interruptQueue, &pin_number, portMAX_DELAY)) {
-            printf("Interrupt Detected!\n");
-            if(pin_number == GPIO_NUM_19 && gpio_get_level(GPIO_NUM_19) == 1) {
-                gpio_intr_disable(GPIO_NUM_19); // Disable gpio intr to ensure that it only connects once
-                deviceControl->intr_status = 0;
-                printf("Disabled interrupt on gpio pin 19\n");
-                //interrupted = true;
-                read = deviceControl->nvs.getBinaryValue("BluetoothOwner", owner, ESP_BD_ADDR_LEN);
-                deviceControl->btHandler->setOwner(owner); // set owner for reconnect function
-                printf("Got binary value for BT owner\n");
-                if ((uint32_t) owner[0] != 0 && (uint16_t) owner[4] != 0) { // If there is no owner do nothing
-                    printf("Owner to disconnect: ");
-                    for(int i = 0; i < ESP_BD_ADDR_LEN; i++){
-                        printf("%02X ", owner[i]);
-                    }
-                    printf("\n");
-                    printf("Removing Bluetooth Owner\n");
-                    if(esp_a2d_sink_disconnect(owner) != ESP_OK){
-                        printf("Failed to disconnect a2p\n");
-                    }
-                    //ICESleep(1000);
+            if(pin_number == GPIO_NUM_19 && gpio_get_level(GPIO_NUM_19) == 1 && deviceControl->btHandler->a2dpController.isConnected()) {
+                if(esp_a2d_sink_disconnect(deviceControl->btHandler->owner) != ESP_OK){
+                    printf("Failed to disconnect a2p\n");
                 }
+                gpio_intr_disable(GPIO_NUM_19); // Disable gpio intr to ensure that it only interrupts once
+                deviceControl->intr_status = 0;
+                ICESleep(500); 
+                printf("Disconnected Owner: ");
+                for(int i = 0; i < ESP_BD_ADDR_LEN; i++){
+                    printf("%02X ", deviceControl->btHandler->owner[i]);
+                }
+                printf("\n");
             }
         }
     }
@@ -102,7 +88,7 @@ extern "C" void app_main(void)
     }
     delete ioConfig;
 
-    interruptQueue = xQueueCreate(10, sizeof(int));
+    interruptQueue = xQueueCreate(1, sizeof(int));
 
     xTaskCreate(set_new_owner, "set_new_owner", 2048, NULL, 1, NULL);
 
@@ -127,23 +113,15 @@ extern "C" void app_main(void)
     if (i2c_param_config(I2C_NUM_0, &conf0) != ESP_OK) {
         printf("I2C config failed\n");
     }
-    else {
-        printf("I2C config OK!\n");
-    }
     
     if (i2c_driver_install(I2C_NUM_0, I2C_MODE_MASTER, 0, 0, 0) != ESP_OK ) {
         printf("I2C driver install failed\n");
     }
-    else {
-        printf("I2C driver install OK!\n");
-    }
+
     
 
     if(st25dv.begin() != ESP_OK) { // Init ST25DV module
         printf("NFC Tag Init Failed!\n");
-    }
-    else {
-        printf("NFC Tag Init OK!\n");
     }
 
     // Write Bluetooth BR/EDR OOB NDEF message
@@ -153,22 +131,17 @@ extern "C" void app_main(void)
 
     #if BLUETOOTH
     while(1) {
-        static uint32_t read;
-        static uint8_t owner[ESP_BD_ADDR_LEN];
-
         // QPrint::println("Free heap size: " + std::to_string(xPortGetFreeHeapSize()));
         // QPrint::println("Minimum ever heap: " + std::to_string(xPortGetMinimumEverFreeHeapSize()));
         
         if(deviceControl->intr_status == 1) {
-            read = deviceControl->nvs.getBinaryValue("BluetoothOwner", owner, ESP_BD_ADDR_LEN);
             printf("Bluetooth Owner: ");
             for(int i = 0; i < ESP_BD_ADDR_LEN; i++) {
-                printf("%02X ", owner[i]);
+                printf("%02X ", deviceControl->btHandler->owner[i]);
             }
             printf("\n");
             //reconnect(deviceControl);
         }
-        
         ICESleep(2000);
         
     }

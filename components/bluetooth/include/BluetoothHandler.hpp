@@ -14,11 +14,10 @@ class BluetoothHandler {
 private:
     BluetoothCallbackManager callbackManager;
     bool initialized = true;
-    esp_bd_addr_t owner = {0,0,0,0,0,0};
-
     int registerCallbacks();
 
 public:
+    esp_bd_addr_t owner = {0,0,0,0,0,0};
     GAPControl gapController;
     SPPControl sppController;
     A2DPControl a2dpController;

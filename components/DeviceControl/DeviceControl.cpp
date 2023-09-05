@@ -57,14 +57,11 @@ void DeviceControl::startBluetooth() {
             break;
         }
     }
-    printf("Size of Read: %d\n", i);
     if (read != ESP_BD_ADDR_LEN || i == 6) {
         btHandler->setDiscoverable(true);
-        printf("Set Discoverable to true\n");
     } else {
         btHandler->setDiscoverable(false);
         btHandler->setOwner(owner);
-        printf("Set discoverable to false and set owner\n");
     }
 }
 
@@ -280,6 +277,7 @@ void DeviceControl::processWiFiPass(std::string input) {
 
 void DeviceControl::setBluetoothOwner(esp_bd_addr_t deviceAddress) {
     nvs.setBinaryValue("BluetoothOwner", deviceAddress, ESP_BD_ADDR_LEN);
+    btHandler->setDiscoverable(false);
 }
 
 void DeviceControl::removeBluetoothOwner() {

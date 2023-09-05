@@ -37,17 +37,26 @@ void A2DPControl::setI2SOutput(I2SOutput* output) {
 }
 
 void A2DPControl::connectionEvent(esp_a2d_cb_param_t* parameter) {
-    if (parameter->conn_stat.state == ESP_A2D_CONNECTION_STATE_DISCONNECTED) {
+    if (parameter->conn_stat.state == ESP_A2D_CONNECTION_STATE_DISCONNECTED) { // Disconnected
         if(deviceController != nullptr) {
-            deviceController->removeBluetoothOwner();
+            static uint8_t zero[ESP_BD_ADDR_LEN] = {0, 0, 0, 0, 0, 0};
+            //deviceController->removeBluetoothOwner(); // Remove BT owner in nvs partition
+            //deviceController->btHandler->setOwner(zero); // Clear owner for reconnect function
+            deviceController->btHandler->setDiscoverable(true);
             printf("Remove BT Owner in A2DP\n");
         }
         QPrint::println("A2DP was disconnected");
         connected = false;
-    } else if (parameter->conn_stat.state == ESP_A2D_CONNECTION_STATE_CONNECTED) {
+    } 
+    else if (parameter->conn_stat.state == ESP_A2D_CONNECTION_STATE_CONNECTED) { // Connected
         if(deviceController != nullptr) {
-            deviceController->setBluetoothOwner(parameter->conn_stat.remote_bda);
-            printf("Set BT Owner in A2DP\n");
+            deviceController->setBluetoothOwner(parameter->conn_stat.remote_bda); // Set BT owner in nvs partition
+            deviceController->btHandler->setOwner(parameter->conn_stat.remote_bda); // Set owner for reconnect function
+            printf("A2DP was connected to: ");
+            for(int i = 0; i < ESP_BD_ADDR_LEN; i++){
+                printf("%02X ", parameter->conn_stat.remote_bda[i]);
+            }
+            printf("\n");
         } 
         connected = true;
         QPrint::println("A2DP was connected");
@@ -55,8 +64,22 @@ void A2DPControl::connectionEvent(esp_a2d_cb_param_t* parameter) {
             gpio_intr_enable(GPIO_NUM_19);
             printf("Enable interrupt on gpio pin 19\n");
             deviceController->intr_status = 1;
+        }  
+    }
+    else if (parameter->conn_stat.state == ESP_A2D_CONNECTION_STATE_CONNECTING) { // Connecting
+        static uint8_t zero[ESP_BD_ADDR_LEN] = {0, 0, 0, 0, 0, 0};
+        if(memcmp(parameter->conn_stat.remote_bda, deviceController->btHandler->owner, ESP_BD_ADDR_LEN) == 0) { // Prevent the disconnected device from reconnecting, and thereby preventing the new device from connecting
+            esp_a2d_sink_disconnect(deviceController->btHandler->owner);
+            printf("Preventing disconnecting remote device from reconnecting: ");
+            for(int i = 0; i < ESP_BD_ADDR_LEN; i++) {
+                printf("%02X ", parameter->conn_stat.remote_bda[i]);
+            }
+            printf("\n");
         }
-        
+        else { // If the device is different from the last connected device remove BT owner
+            deviceController->removeBluetoothOwner();
+            deviceController->btHandler->setOwner(zero);
+        }
     }
 }
 
